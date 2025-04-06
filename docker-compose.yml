@@ -56,15 +56,8 @@ services:
      - ./jars/postgresql-42.3.3.jar:/opt/bitnami/spark/jars/postgresql-42.3.3.jar
 
 
-  kafka-producer:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: kafka-producer
-    depends_on:
-      - kafka
-    networks:
-      - kafka-spark-streaming
+  
+      
   postgres:
     image: postgres:latest
     container_name: postgres
@@ -97,10 +90,38 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
 
+  mysql_source:
+    image: mysql:latest
+    container_name: mysql_source
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: source_db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: userpass
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql-init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - kafka-spark-streaming
+
+  kafka-producer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kafka-producer
+    depends_on:
+      - mysql_source
+    entrypoint: ["sh", "-c", "sleep 10 && python3 kafka_producer.py"]
+    networks:
+      - kafka-spark-streaming
+
 
 volumes:
   postgres_data:
   grafana_data:
+  mysql_data:
 
 networks:
   kafka-spark-streaming:
