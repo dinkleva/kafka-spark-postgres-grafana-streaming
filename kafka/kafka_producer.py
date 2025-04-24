@@ -53,7 +53,7 @@ offset = 0
 
 # Connect to MySQL
 db = mysql.connector.connect(
-    host="mysql_source",
+    host="mysql-source",
     user="user",
     password="userpass",
     database="source_db"
@@ -69,9 +69,6 @@ def json_serializer(obj):
     if isinstance(obj, datetime):
         return obj.isoformat()  # Convert datetime to string
     raise TypeError(f"Type {type(obj)} not serializable")
-
-# Use this serializer in your Kafka producer
-
 
 # Kafka Producer
 producer = KafkaProducer(

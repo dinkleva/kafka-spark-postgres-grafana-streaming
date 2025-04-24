@@ -1,0 +1,10 @@
+kafka:
+  servers: kafka:9092
+  topic: amazon_topic
+  startingOffsets: earliest
+
+postgres:
+  url: jdbc:postgresql://postgres:5432/amazon
+  user: postgres
+  password: postpass
+  table: amazon_products

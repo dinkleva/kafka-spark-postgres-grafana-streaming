@@ -1,0 +1,23 @@
+{
+    "table_name": "amazon_products",
+    "schema": [
+      {"name": "product_id", "type": "VARCHAR(50)"},
+      {"name": "product_name", "type": "TEXT"},
+      {"name": "category", "type": "VARCHAR(100)"},
+      {"name": "discounted_price", "type": "VARCHAR(20)"},
+      {"name": "actual_price", "type": "VARCHAR(20)"},
+      {"name": "discount_percentage", "type": "VARCHAR(10)"},
+      {"name": "rating", "type": "DOUBLE"},
+      {"name": "rating_count", "type": "INT"},
+      {"name": "about_product", "type": "TEXT"},
+      {"name": "user_id", "type": "VARCHAR(50)"},
+      {"name": "user_name", "type": "VARCHAR(100)"},
+      {"name": "review_id", "type": "VARCHAR(50)"},
+      {"name": "review_title", "type": "TEXT"},
+      {"name": "review_content", "type": "TEXT"},
+      {"name": "img_link", "type": "TEXT"},
+      {"name": "product_link", "type": "TEXT"}
+    ],
+    "primary_key": ["product_id", "user_id", "review_id"]
+  }
+  

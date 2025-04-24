@@ -6,14 +6,21 @@ services:
       - ALLOW_ANONYMOUS_LOGIN=yes
     ports:
       - "2181:2181"
+    healthcheck:
+      test: ["CMD", "echo", "ruok", "|", "nc", "localhost", "2181"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      mysql-source:
+        condition: service_healthy
+
     networks:
       - kafka-spark-streaming
 
   kafka:
     image: bitnami/kafka:latest
     container_name: kafka
-    depends_on:
-      - zookeeper
     environment:
       - ALLOW_PLAINTEXT_LISTENER=yes
       - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
@@ -21,6 +28,14 @@ services:
       - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
     ports:
       - "9092:9092"
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/9092"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
       - kafka-spark-streaming
 
@@ -38,6 +53,7 @@ services:
     networks:
       - kafka-spark-streaming
     volumes:
+      - ./spark:/opt/bitnami/spark/app
       - ./jars/postgresql-42.3.3.jar:/opt/bitnami/spark/jars/postgresql-42.3.3.jar
 
 
@@ -55,7 +71,23 @@ services:
     volumes:
      - ./jars/postgresql-42.3.3.jar:/opt/bitnami/spark/jars/postgresql-42.3.3.jar
 
-
+  spark-job:
+    build:
+      context: ./spark
+      dockerfile: Dockerfile
+    container_name: spark-job
+    depends_on:
+      kafka-producer:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      spark-worker-1:
+        condition: service_started
+    volumes:
+    - ./jars/postgresql-42.3.3.jar:/opt/bitnami/spark/jars/postgresql-42.3.3.jar
+    networks:
+      - kafka-spark-streaming
+ 
   
       
   postgres:
@@ -68,9 +100,15 @@ services:
       POSTGRES_DB: kafka_streaming
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
       - kafka-spark-streaming
     volumes:
+      - ./postgres/init:/docker-entrypoint-initdb.d
       - postgres_data:/var/lib/postgresql/data
 
 
@@ -90,32 +128,48 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
 
-  mysql_source:
-    image: mysql:latest
-    container_name: mysql_source
+  mysql-source:
+    image:  mysql:latest
+    container_name: mysql-source
     ports:
-      - "3306:3306"
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: source_db
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: amazon
       MYSQL_USER: user
       MYSQL_PASSWORD: userpass
     volumes:
+      - ./mysql/initdb:/docker-entrypoint-initdb.d
+      - ./mysql/data:/var/lib/mysql-files
       - mysql_data:/var/lib/mysql
-      - ./mysql-init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
+      
       - kafka-spark-streaming
+
 
   kafka-producer:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ./kafka
     container_name: kafka-producer
     depends_on:
-      - mysql_source
-    entrypoint: ["sh", "-c", "sleep 10 && python3 kafka_producer.py"]
+      kafka:
+        condition: service_healthy
+      mysql-source:
+        condition: service_healthy
+    env_file:
+      - ./kafka/docker/kafka.env
+    entrypoint: ["/app/wait-for-mysql.sh", "python3", "scripts/producer.py"]
+    volumes:
+      - ./kafka:/app
+    working_dir: /app
     networks:
       - kafka-spark-streaming
+
 
 
 volumes:

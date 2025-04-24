@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=https://json.schemastore.org/config
+#(this is for ! mark for yml)
+
+kafka:
+  broker: "kafka:9092"
+  topic: "amazon_topic"
+
+mysql:
+  host: "mysql-source"
+  user: "user"
+  password: "userpass"
+  database: "amazon"
+  table: "amazon_sales_data"
+  batch_size: 100
